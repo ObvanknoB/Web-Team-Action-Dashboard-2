@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Web Team Action Dashboard</title>
+<meta name="description" content="Interactive action dashboard for web-development task trackers. Demonstration prototype.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F3F6F9;
+    --surface: #FFFFFF;
+    --ink: #1B2733;
+    --muted: #586878;
+    --line: #D3DCE5;
+    --blueprint: #2F5DA8;
+    --blueprint-soft: #E8EFFA;
+    --warn: #9A5B00;
+    --warn-soft: #FFF4E0;
+    --bad: #B3261E;
+    --bad-soft: #FDECEA;
+    --ok: #2C7A4B;
+    --radius: 6px;
+    --font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #111A22;
+      --surface: #18232E;
+      --ink: #E4EAF0;
+      --muted: #9AAAB9;
+      --line: #2C3B4A;
+      --blueprint: #8FB3F0;
+      --blueprint-soft: #1D2D45;
+      --warn: #F0B860;
+      --warn-soft: #33270F;
+      --bad: #F28B82;
+      --bad-soft: #3A1D1B;
+      --ok: #7DCB9A;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 32px 20px 64px; display: flex; flex-direction: column; gap: 28px; }
+  h1 { font-size: 1.9rem; font-weight: 600; line-height: 1.2; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 1.15rem; font-weight: 600; margin: 0; }
+  h3 { font-size: 1rem; font-weight: 600; margin: 0; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.85rem; }
+  .strong { font-weight: 600; }
+  .num { font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid var(--blueprint); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+
+  .head { display: flex; flex-direction: column; gap: 8px; max-width: 75ch; }
+  .lede { font-size: 1.05rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 0.85rem; color: var(--muted); }
+
+  .tag { display: inline-block; font-size: 0.78rem; line-height: 1.4; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); white-space: nowrap; vertical-align: baseline; }
+  .tag-missing { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+  .tag-risk { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
+  .tag-ok { border-color: var(--ok); color: var(--ok); }
+  .tag-proposed { border: 1px dashed var(--blueprint); color: var(--blueprint); background: var(--blueprint-soft); }
+  .tag-filter { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .proposed-date { border: 1px dashed var(--blueprint); color: var(--blueprint); background: var(--blueprint-soft); border-radius: 4px; padding: 0 5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .row-end { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--muted); }
+  .grow { flex: 1 1 240px; }
+  input[type="text"], input[type="search"], input[type="date"], select { font: inherit; font-size: 0.95rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 10px; min-width: 0; }
+  input[type="file"] { font: inherit; font-size: 0.9rem; color: var(--ink); max-width: 100%; }
+  .btn { font: inherit; font-size: 0.92rem; font-weight: 500; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 14px; cursor: pointer; white-space: nowrap; }
+  .btn:hover { border-color: var(--muted); }
+  .btn-primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .warn-text { color: var(--bad); }
+  .ok-text { color: var(--ok); }
+
+  .scope { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.85rem; color: var(--muted); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 2px; }
+  .card-label { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+  .card-value { font-size: 2.5rem; font-weight: 500; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .card-note { font-size: 0.82rem; color: var(--muted); }
+
+  .section { display: flex; flex-direction: column; gap: 12px; }
+  .attn { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .attn > li { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .attn > li.empty { border-left-color: var(--line); color: var(--muted); }
+  .attn-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+  .meta { font-size: 0.85rem; color: var(--muted); }
+  .list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 3px; }
+  .dates { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: var(--muted); align-items: center; }
+  .dates b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  .pd { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .pd-list { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 8px; }
+
+  details.more { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 16px; }
+  details.more > summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style-position: outside; }
+  details.more > summary .sum-note { font-weight: 400; font-size: 0.85rem; color: var(--muted); margin-left: 8px; }
+  details.more[open] > summary { border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  .more-body { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
+
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th { text-align: left; font-size: 0.8rem; color: var(--muted); font-weight: 500; padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr.task { cursor: pointer; }
+  tr.task:hover td { background: var(--bg); }
+  .toggle { font: inherit; font-size: 0.8rem; color: var(--ink); background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+  tr.detail > td { background: var(--bg); }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; padding: 6px 0; }
+  .detail-col { display: flex; flex-direction: column; gap: 8px; }
+  .detail-col h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.95rem; }
+  dl.kv { margin: 0; display: grid; grid-template-columns: minmax(110px, auto) 1fr; gap: 4px 14px; }
+  dl.kv dt { color: var(--muted); font-size: 0.82rem; padding-top: 2px; }
+  dl.kv dd { margin: 0; }
+
+  .tl-wrap { position: relative; overflow-x: auto; }
+  .tl { display: grid; min-width: 600px; font-size: 0.8rem; }
+  .tl-head { color: var(--muted); text-align: center; padding: 4px 2px; border-bottom: 1px solid var(--line); line-height: 1.3; }
+  .tl-week { border-left: 1px solid var(--line); }
+  .tl-label { padding: 8px 8px 8px 0; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--line); }
+  .tl-cell { position: relative; border-bottom: 1px solid var(--line); min-height: 46px; display: flex; align-items: center; justify-content: center; }
+  .tl-bar { position: absolute; left: 3px; right: 3px; top: 12px; bottom: 12px; border-radius: 4px; border: 1px dashed var(--blueprint); background: var(--blueprint-soft); }
+  .tl-due { position: absolute; top: 4px; bottom: 4px; left: 2px; width: 3px; border-radius: 2px; background: var(--bad); }
+  .tl-fb { width: 12px; height: 12px; transform: rotate(45deg); border: 2px dashed var(--blueprint); background: var(--surface); position: relative; }
+  .key { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.82rem; color: var(--muted); align-items: center; }
+  .key-bar { display: inline-block; width: 18px; height: 10px; border-radius: 3px; border: 1px dashed var(--blueprint); background: var(--blueprint-soft); vertical-align: middle; margin-right: 6px; }
+  .key-due { display: inline-block; width: 3px; height: 12px; background: var(--bad); vertical-align: middle; margin-right: 6px; }
+  .key-fb { display: inline-block; width: 9px; height: 9px; transform: rotate(45deg); border: 2px dashed var(--blueprint); vertical-align: middle; margin-right: 8px; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(0,0,0,0.12); border-radius: var(--radius); padding: 6px 10px; font-size: 0.8rem; max-width: 250px; z-index: 5; }
+
+  .val { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .val-group { display: flex; flex-direction: column; gap: 4px; }
+  .notes { font-size: 0.88rem; color: var(--muted); display: flex; flex-direction: column; gap: 8px; max-width: 80ch; }
+  footer { font-size: 0.8rem; color: var(--muted); }
+  @media (max-width: 560px) { .card-value { font-size: 2rem; } h1 { font-size: 1.55rem; } }
+  @media print { details.more { break-inside: avoid; } .no-print { display: none !important; } }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <header class="head" id="overview">
+    <h1>Web Team Action Dashboard</h1>
+    <p class="lede">Showing <b id="source-name">the demo data</b>. Overdue checks use <b id="ref-lede">—</b>.</p>
+    <p class="small muted">Demonstration prototype for web-development task trackers. Proposed dates are planning suggestions, not delivery commitments.</p>
+    <div class="legend">
+      <span>Labels:</span>
+      <span class="tag">Source fact</span><span>recorded in the tracker</span>
+      <span class="tag tag-missing">Missing</span><span>not recorded, needs confirmation</span>
+      <span class="tag tag-proposed">Proposed</span><span>a planning date, demo only</span>
+    </div>
+  </header>
+
+  <section class="panel no-print" id="data-source" aria-label="Data source">
+    <div class="row"><span class="strong">Data source:</span><span id="source-detail">—</span></div>
+    <div class="row">
+      <button type="button" class="btn btn-primary" id="open-load" aria-expanded="false" aria-controls="load-panel">Load new tracker</button>
+      <button type="button" class="btn" id="load-demo">Load demo data</button>
+      <button type="button" class="btn" id="export-csv">Download filtered tasks (CSV)</button>
+    </div>
+    <p class="small muted" id="persistence">This page runs entirely in your browser and keeps data in memory only. An uploaded file is not sent anywhere and is gone after a refresh, when the demo data returns.</p>
+  </section>
+
+  <section class="panel no-print" id="load-panel" hidden aria-label="Load new tracker">
+    <h2>Load new tracker</h2>
+    <p class="small muted">Upload a CSV file with these columns: Task ID, Task, Owner, Status, Priority, Due date, Estimated hours, Dependency, Notes. The file is checked first, and nothing replaces the current data until you confirm.</p>
+    <div class="row">
+      <label class="field">CSV file <input type="file" id="file" accept=".csv,text/csv"></label>
+      <button type="button" class="btn" id="template">Download blank CSV template</button>
+    </div>
+    <div class="val" id="validation" hidden></div>
+  </section>
+
+  <section class="panel" id="filters" aria-label="Filters">
+    <div class="row-end">
+      <label class="field grow">Search Task ID or description
+        <input id="search" type="search" placeholder="For example WEB-01 or form" autocomplete="off">
+      </label>
+      <label class="field">Owner <select id="f-owner"></select></label>
+      <label class="field">Status <select id="f-status"></select></label>
+      <label class="field">Priority <select id="f-priority"></select></label>
+      <button type="button" class="btn" id="reset">Reset filters</button>
+    </div>
+    <div class="row-end">
+      <label class="field">Overdue check date
+        <input id="refdate" type="date" min="2000-01-01" max="2100-12-31">
+      </label>
+      <p class="small muted" id="ref-note">—</p>
+    </div>
+  </section>
+
+  <section class="section" id="summary" aria-label="Summary">
+    <div class="scope" id="scope"></div>
+    <div class="cards">
+      <div class="card"><span class="card-label">Tasks</span><span class="card-value" id="c-tasks">—</span><span class="card-note">Full tracker: <span id="c-tasks-all">—</span></span></div>
+      <div class="card"><span class="card-label">Overdue open tasks</span><span class="card-value" id="c-overdue">—</span><span class="card-note">Full tracker: <span id="c-overdue-all">—</span>. Due before <span id="ref-card">—</span></span></div>
+      <div class="card"><span class="card-label">Missing owners</span><span class="card-value" id="c-owners">—</span><span class="card-note">Full tracker: <span id="c-owners-all">—</span></span></div>
+      <div class="card"><span class="card-label">Missing estimates</span><span class="card-value" id="c-est">—</span><span class="card-note">Full tracker: <span id="c-est-all">—</span></span></div>
+    </div>
+  </section>
+
+  <section class="section" id="attention">
+    <h2>Tasks needing attention (<span id="c-att">—</span> shown, <span id="c-att-all">—</span> in full tracker)</h2>
+    <ul class="attn" id="attn-list"></ul>
+  </section>
+
+  <section class="section" id="priorities">
+    <h2>Priorities and decisions</h2>
+    <div class="pd" id="pd"></div>
+    <p class="small muted">Recording decisions needs a shared database, so it is not available in this static version.</p>
+  </section>
+
+  <details class="more" id="missing">
+    <summary>Missing information <span class="sum-note"><span id="c-missing">—</span> items to confirm, full tracker</span></summary>
+    <div class="more-body">
+      <p class="small muted">Everything the tracker does not record or that failed validation. None of these gaps has been filled in or estimated.</p>
+      <div class="scroll"><table><thead><tr><th>Task ID</th><th>What is missing or invalid</th><th>Type</th></tr></thead><tbody id="missing-rows"></tbody></table></div>
+    </div>
+  </details>
+
+  <details class="more" id="tasks" open>
+    <summary>All tasks <span class="sum-note"><span id="task-count">—</span>. Click a row to see its supporting details.</span></summary>
+    <div class="more-body">
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Details</th><th>Task ID</th><th>Task</th><th>Owner</th><th>Status</th><th>Priority</th><th>Original due date</th><th>Estimated hours</th><th>Proposed finish</th></tr></thead>
+          <tbody id="task-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <details class="more" id="timeline">
+    <summary>Two-week proposed schedule <span class="sum-note">Demo plan only, working days</span></summary>
+    <div class="more-body">
+      <p class="small muted">Every date on this chart except the original due date is a proposal. The chart follows the filters above.</p>
+      <div class="tl-wrap" id="tl"></div>
+      <div class="key">
+        <span><span class="key-bar"></span>Proposed work (start to target finish)</span>
+        <span><span class="key-fb"></span>Proposed fallback checkpoint</span>
+        <span><span class="key-due"></span>Original due date (source fact)</span>
+      </div>
+    </div>
+  </details>
+
+  <details class="more" id="notes">
+    <summary>Definitions, data handling and what persists</summary>
+    <div class="more-body notes">
+      <p>An open task is any task whose status is not Done, Complete, Completed, Closed or Cancelled. A task is overdue when it is open and its due date is before the overdue check date. Tasks with no due date or an invalid one are never counted as overdue; they are listed under Missing information.</p>
+      <p>Estimated hours are planned working effort, not elapsed time, and are never turned into delivery dates. Non-numeric estimates are kept exactly as written and flagged.</p>
+      <p>Filtered figures count only tasks matching the search and filters. Each card also shows the figure for the full tracker. Missing information always covers the full tracker.</p>
+      <p>Persistence: this static page has no server or database. Uploaded files are read in your browser, never sent anywhere, and kept in memory only. Refreshing or closing the page clears the upload and restores the demo data.</p>
+      <p>Demo data is a snapshot of the fictional task tracker Google Sheet taken on 20 Nov 2026. It does not update live. Its proposed dates, schedule and team lead priorities are cleared whenever another tracker is loaded and are never applied to uploaded records.</p>
+      <p>Dates in a CSV can be written as 30 Nov 2026, 2026-11-30 or 30/11/2026. Slash dates are read day first.</p>
+      <p>Nothing on this page is simulated. Validation, loading, filtering and downloads all really happen in your browser. Features that need a server, such as live Google Sheet data, shared decision logging and keeping an upload after a refresh, are not included.</p>
+    </div>
+  </details>
+
+  <footer>Web Team Action Dashboard, static demonstration build. Demo snapshot taken 20 Nov 2026.</footer>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------- Demo snapshot (from the task tracker Google Sheet, 20 Nov 2026) ---------- */
+  const DEMO = {
+    tasks: [{'Task ID': 'WEB-01', 'Task': 'Fix service-request form', 'Owner': 'Developer A', 'Status': 'In progress', 'Priority': 'High', 'Due date': '30 Nov 2026', 'Estimated hours': '6', 'Dependency': 'Approved form fields', 'Notes': 'Validation errors on mobile'}],
+    plan: [{
+      'Task ID': 'WEB-01', 'Task': 'Fix service-request form', 'Owner': 'Developer A',
+      'Proposed start': '30 Nov 2026', 'Proposed finish (target)': '30 Nov 2026', 'Dependency': 'Approved form fields',
+      'Blocker or assumption': 'Blocker: the tracker does not say whether the form fields are approved. Assumptions: approval is confirmed before 30 Nov 2026; the task is already in progress, but no start date is recorded, so work completed so far is unknown; team capacity is not assumed.',
+      'Original due date': '30 Nov 2026', 'Due-date flag (target)': 'Meets due date only if the dependency is approved before work starts',
+      'Fallback checkpoint (proposed)': '4 Dec 2026', 'Due-date flag (fallback)': 'Exceeds due date by 4 working days',
+      'Estimated hours (effort, not elapsed time)': '6', 'Owner and estimate check': 'Owner and estimate recorded; estimate not yet validated'
+    }],
+    priorities: [
+      {'#': '1', 'Priority': 'Confirm the dependency', 'Decision needed': 'Are the form fields approved? If not, name who approves them and by when. Without approval, the 30 Nov 2026 due date cannot be met.'},
+      {'#': '2', 'Priority': 'Hold or re-baseline the due date', 'Decision needed': "Keep 30 Nov 2026, which may mean reprioritising Developer A's other work, or set a new date formally and keep 30 Nov 2026 in the record as the original baseline."},
+      {'#': '3', 'Priority': 'Define done and close tracking gaps', 'Decision needed': 'Agree which devices and browsers must pass the mobile validation fix, and decide whether to add Start date, Remaining hours and Actual hours to the tracker.'}
+    ],
+    windowStart: '2026-11-30', windowEnd: '2026-12-11', refDate: '2026-11-20'
+  };
+
+  const FIELDS = ['Task ID', 'Task', 'Owner', 'Status', 'Priority', 'Due date', 'Estimated hours', 'Dependency', 'Notes'];
+  const MAX_ROWS = 2000;
+  const CLOSED = /^(done|complete|completed|closed|cancelled|canceled)$/i;
+  const MONTHS = {jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12};
+  const MON_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  /* ---------- Helpers ---------- */
+  const $ = (id) => document.getElementById(id);
+  const blank = (x) => x === null || x === undefined || String(x).trim() === '';
+  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined && text !== null) n.textContent = text; return n; };
+  const tag = (kind, text) => el('span', 'tag' + (kind ? ' tag-' + kind : ''), text);
+  const isoOf = (y, m, d) => {
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+    return dt.toISOString().slice(0, 10);
+  };
+  const parseDate = (s) => {
+    const t = String(s || '').trim(); let r;
+    if ((r = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t))) return isoOf(+r[1], +r[2], +r[3]);
+    if ((r = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(t))) return isoOf(+r[3], +r[2], +r[1]);
+    if ((r = /^(\d{1,2})[\s-]+([A-Za-z]{3})[A-Za-z]*\.?[\s-]+(\d{4})$/.exec(t)) && MONTHS[r[2].toLowerCase()]) return isoOf(+r[3], MONTHS[r[2].toLowerCase()], +r[1]);
+    return null;
+  };
+  const fmtIso = (iso) => { if (!iso) return null; const [y, m, d] = iso.split('-').map(Number); return d + ' ' + MON_NAMES[m - 1] + ' ' + y; };
+  const todayIso = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+
+  /* ---------- State ---------- */
+  const state = {
+    mode: 'demo', fileName: null, loadedAt: null, rawTasks: [], plan: [], priorities: [], missingColumns: [],
+    windowStart: null, windowEnd: null, refDate: null, refSource: '',
+    filters: {q: '', owner: '', status: '', priority: ''}, open: new Set(), pending: null
+  };
+
+  const normalise = (src) => {
+    const counts = {};
+    src.forEach((t) => { if (!blank(t['Task ID'])) { const k = String(t['Task ID']).trim().toLowerCase(); counts[k] = (counts[k] || 0) + 1; } });
+    return src.map((t, i) => {
+      const o = {Row: String(i + 1)};
+      FIELDS.forEach((f) => { o[f] = blank(t[f]) ? null : String(t[f]).trim(); });
+      o.dueIso = o['Due date'] ? parseDate(o['Due date']) : null;
+      o.dueCheck = !o['Due date'] ? 'Not recorded' : (o.dueIso ? 'Valid' : 'Invalid date');
+      o.estCheck = !o['Estimated hours'] ? 'Not recorded' : (/^\d+(\.\d+)?$/.test(o['Estimated hours']) ? 'Valid' : 'Not a number');
+      o.duplicate = !!o['Task ID'] && counts[o['Task ID'].toLowerCase()] > 1;
+      return o;
+    });
+  };
+
+  const loadDemo = () => {
+    Object.assign(state, {
+      mode: 'demo', fileName: null, loadedAt: null, rawTasks: DEMO.tasks, plan: DEMO.plan, priorities: DEMO.priorities, missingColumns: [],
+      windowStart: DEMO.windowStart, windowEnd: DEMO.windowEnd, refDate: DEMO.refDate, refSource: 'status reference date in the demo plan',
+      filters: {q: '', owner: '', status: '', priority: ''}, open: new Set()
+    });
+    state.tasks = normalise(state.rawTasks);
+  };
+
+  /* ---------- Derived data ---------- */
+  const filtered = () => {
+    const f = state.filters; const q = f.q.trim().toLowerCase();
+    return state.tasks.filter((t) =>
+      (!f.owner || (t.Owner || '(No owner recorded)') === f.owner) &&
+      (!f.status || (t.Status || '(No status recorded)') === f.status) &&
+      (!f.priority || (t.Priority || '(No priority recorded)') === f.priority) &&
+      (!q || String(t['Task ID'] || '').toLowerCase().includes(q) || String(t.Task || '').toLowerCase().includes(q)));
+  };
+  const planFor = (t) => state.plan.find((p) => p['Task ID'] === t['Task ID']);
+  const isOverdue = (t) => !!(state.refDate && t.dueIso && !CLOSED.test(t.Status || '') && t.dueIso < state.refDate);
+
+  const reasonsFor = (t) => {
+    if (CLOSED.test(t.Status || '')) return [];
+    const r = [];
+    if (isOverdue(t)) r.push('Overdue: due ' + t['Due date'] + ', before the overdue check date of ' + fmtIso(state.refDate) + '.');
+    const p = planFor(t);
+    if (p && t.dueIso) {
+      const fin = parseDate(p['Proposed finish (target)']); const fb = parseDate(p['Fallback checkpoint (proposed)']);
+      if (fin && fin > t.dueIso) r.push('Proposed finish (' + p['Proposed finish (target)'] + ') is after the original due date (' + t['Due date'] + ').');
+      if (fb && fb > t.dueIso) r.push('Proposed fallback checkpoint (' + p['Fallback checkpoint (proposed)'] + ') is after the original due date (' + t['Due date'] + '): ' + (p['Due-date flag (fallback)'] || 'flagged') + '.');
+    }
+    if (t.Dependency) r.push('Depends on “' + t.Dependency + '”, which the tracker does not show as complete.');
+    if (!t.Owner) r.push('No owner recorded.');
+    if (t.estCheck === 'Not recorded') r.push('No estimate recorded.');
+    if (t.estCheck === 'Not a number') r.push('Estimate “' + t['Estimated hours'] + '” is not a number.');
+    if (t.dueCheck === 'Not recorded') r.push('No due date recorded.');
+    if (t.dueCheck === 'Invalid date') r.push('Due date “' + t['Due date'] + '” is not a valid date, so it is not checked for overdue.');
+    if (t.duplicate) r.push('Task ID ' + t['Task ID'] + ' appears more than once.');
+    return r;
+  };
+
+  const missingItems = () => {
+    const out = [];
+    const add = (id, item, type) => out.push({id, item, type});
+    state.missingColumns.forEach((c) => add('All tasks', 'The uploaded file has no ' + c + ' column, so every ' + c + ' is not recorded.', 'Missing column'));
+    state.tasks.forEach((t) => {
+      const id = t['Task ID'] || 'Row ' + t.Row + ' (no Task ID)';
+      FIELDS.filter((f) => !state.missingColumns.includes(f) && blank(t[f])).forEach((f) => add(id, f + ' is not recorded.', 'Blank field'));
+      if (t.dueCheck === 'Invalid date') add(id, 'Due date “' + t['Due date'] + '” is not a valid date.', 'Invalid date');
+      if (t.estCheck === 'Not a number') add(id, 'Estimated hours “' + t['Estimated hours'] + '” is not a number.', 'Non-numeric estimate');
+      if (t.duplicate) add(id, 'This Task ID is used by more than one row.', 'Duplicate Task ID');
+      if (t.Dependency) add(id, 'Whether the dependency “' + t.Dependency + '” is complete is not recorded.', 'Not tracked');
+      const p = planFor(t);
+      if (state.mode === 'demo' && !p) add(id, 'No row in the action plan, so no proposed dates.', 'Plan gap');
+      if (p && /not yet validated/i.test(p['Owner and estimate check'] || '')) add(id, 'The estimate of ' + (t['Estimated hours'] || '?') + ' hours is recorded but not validated.', 'Needs confirmation');
+    });
+    if (state.tasks.length) ['Start date', 'Actual hours', 'Completed date'].forEach((c) => add('All tasks', c + ' has no column in the tracker, so it cannot be measured.', 'Not tracked'));
+    return out;
+  };
+
+  /* ---------- Rendering ---------- */
+  const fillSelect = (sel, field, none, allLabel, cur) => {
+    const opts = [...new Set(state.tasks.map((t) => t[field] || none))].sort();
+    if (cur && !opts.includes(cur)) opts.push(cur);
+    sel.replaceChildren(new Option(allLabel, ''), ...opts.map((o) => new Option(o, o)));
+    sel.value = cur;
+  };
+
+  const activeFilterLabels = () => {
+    const f = state.filters; const out = [];
+    if (f.q.trim()) out.push('Search: “' + f.q.trim() + '”');
+    if (f.owner) out.push('Owner: ' + f.owner);
+    if (f.status) out.push('Status: ' + f.status);
+    if (f.priority) out.push('Priority: ' + f.priority);
+    return out;
+  };
+
+  const renderHeader = () => {
+    const ref = state.refDate ? fmtIso(state.refDate) : 'no date set';
+    $('source-name').textContent = state.mode === 'demo' ? 'the demo data' : 'the uploaded file ' + state.fileName;
+    $('ref-lede').textContent = ref; $('ref-card').textContent = ref;
+    const n = plural(state.tasks.length, 'task', 'tasks');
+    $('source-detail').textContent = state.mode === 'demo'
+      ? 'Demo data, a snapshot of the task tracker taken on 20 Nov 2026, ' + n + '.'
+      : 'Uploaded CSV “' + state.fileName + '”, loaded ' + state.loadedAt + ', ' + n + '. Proposed dates and the demo’s priorities were cleared for it.';
+    $('ref-note').textContent = state.refDate
+      ? 'Overdue checks use ' + fmtIso(state.refDate) + ' (' + state.refSource + ').'
+      : 'Pick a date to check for overdue tasks. Until then, no task is counted as overdue.';
+    if (document.activeElement !== $('refdate')) $('refdate').value = state.refDate || '';
+  };
+
+  const renderSummary = (rows) => {
+    const shown = new Set(rows.map((t) => t.Row));
+    const all = state.tasks;
+    const count = (list, fn) => list.filter(fn).length;
+    const od = (list) => state.refDate ? String(count(list, isOverdue)) : null;
+    $('c-tasks').textContent = rows.length; $('c-tasks-all').textContent = all.length;
+    $('c-overdue').textContent = od(rows) ?? 'No date'; $('c-overdue-all').textContent = od(all) ?? 'no date set';
+    $('c-owners').textContent = count(rows, (t) => !t.Owner); $('c-owners-all').textContent = count(all, (t) => !t.Owner);
+    $('c-est').textContent = count(rows, (t) => t.estCheck === 'Not recorded'); $('c-est-all').textContent = count(all, (t) => t.estCheck === 'Not recorded');
+    const attnAll = all.filter((t) => reasonsFor(t).length);
+    $('c-att').textContent = attnAll.filter((t) => shown.has(t.Row)).length; $('c-att-all').textContent = attnAll.length;
+    const labels = activeFilterLabels();
+    const scope = $('scope');
+    if (!labels.length) scope.replaceChildren(tag('', 'Full tracker'), el('span', null, 'No filters applied. Big numbers and “Full tracker” figures are the same.'));
+    else scope.replaceChildren(tag('filter', 'Filtered view'), el('span', null, rows.length + ' of ' + all.length + ' tasks match. Big numbers count matching tasks only; “Full tracker” counts every task.'), ...labels.map((l) => tag('', l)));
+    $('task-count').textContent = 'Showing ' + rows.length + ' of ' + plural(all.length, 'task', 'tasks');
+  };
+
+  const renderAttention = (rows) => {
+    const list = $('attn-list');
+    const items = rows.map((t) => ({t, r: reasonsFor(t)})).filter((x) => x.r.length);
+    if (!items.length) {
+      const anyAll = state.tasks.some((t) => reasonsFor(t).length);
+      list.replaceChildren(el('li', 'empty', anyAll ? 'No task needing attention matches the filters.' : 'No open task needs attention.'));
+      return;
+    }
+    list.replaceChildren(...items.map(({t, r}) => {
+      const li = el('li');
+      const head = el('div', 'attn-head');
+      head.append(el('span', 'strong', t['Task ID'] || 'Row ' + t.Row + ' (no Task ID)'), el('span', null, t.Task || ''));
+      head.append(el('span', 'meta', [t.Owner, t.Status, t.Priority ? t.Priority + ' priority' : null].filter(Boolean).join(', ')));
+      if (!t.Owner) head.append(tag('missing', 'No owner'));
+      const ul = el('ul', 'list'); r.forEach((x) => ul.append(el('li', null, x)));
+      const dates = el('div', 'dates');
+      const w = el('span'); w.append(document.createTextNode('Original due date '));
+      if (t['Due date']) w.append(el('b', null, t['Due date']), document.createTextNode(' '), tag('', 'Source fact')); else w.append(tag('missing', 'Not recorded'));
+      dates.append(w);
+      const p = planFor(t);
+      if (p) {
+        [['Target finish', p['Proposed finish (target)']], ['Fallback', p['Fallback checkpoint (proposed)']]].forEach(([label, v]) => {
+          const s = el('span'); s.append(document.createTextNode(label + ' '));
+          if (v) s.append(el('span', 'proposed-date', v), document.createTextNode(' '), tag('proposed', 'Proposed')); else s.append(tag('missing', 'Not set'));
+          dates.append(s);
+        });
+      } else dates.append(el('span', null, state.mode === 'csv' ? 'No proposed dates for uploaded trackers.' : 'No proposed dates.'));
+      li.append(head, ul, dates);
+      if (p && p['Due-date flag (target)']) li.append(el('span', 'meta', 'Qualification: ' + p['Due-date flag (target)'] + '.'));
+      return li;
+    }));
+  };
+
+  const renderPriorities = () => {
+    const box = $('pd');
+    if (!state.priorities.length) {
+      box.replaceChildren(el('p', 'muted', state.mode === 'csv'
+        ? 'No priorities or decisions for this tracker. The demo’s recommendations were cleared when it was loaded and are not applied to these records.'
+        : 'No priorities are recorded.'));
+      return;
+    }
+    const b1 = el('div', 'panel'); const ol1 = el('ol', 'pd-list');
+    state.priorities.forEach((r) => ol1.append(el('li', 'strong', r.Priority || '—')));
+    b1.append(el('h3', null, 'Priorities'), ol1);
+    const b2 = el('div', 'panel'); const ol2 = el('ol', 'pd-list');
+    state.priorities.forEach((r) => ol2.append(el('li', null, r['Decision needed'] || 'Not recorded')));
+    b2.append(el('h3', null, 'Decisions required from the team lead'), ol2);
+    box.replaceChildren(b1, b2);
+  };
+
+  const renderMissing = () => {
+    const items = missingItems();
+    $('c-missing').textContent = items.length;
+    const tb = $('missing-rows');
+    if (!items.length) { const tr = el('tr'); const td = el('td', 'muted', 'Nothing is missing.'); td.colSpan = 3; tr.append(td); tb.replaceChildren(tr); return; }
+    tb.replaceChildren(...items.map((m) => {
+      const tr = el('tr'); tr.append(el('td', null, m.id), el('td', null, m.item));
+      const td = el('td'); td.append(tag(/Invalid|Non-numeric|Duplicate|Missing column/.test(m.type) ? 'risk' : 'missing', m.type)); tr.append(td);
+      return tr;
+    }));
+  };
+
+  const kv = (dl, label, v, extras) => {
+    const dd = el('dd');
+    if (blank(v)) dd.append(tag('missing', 'Not recorded'));
+    else { dd.append(el('span', null, v)); (extras || []).forEach((x) => dd.append(document.createTextNode(' '), x)); }
+    dl.append(el('dt', null, label), dd);
+  };
+  const kvProposed = (dl, label, v) => {
+    const dd = el('dd');
+    if (blank(v)) dd.append(tag('missing', 'Not set'));
+    else dd.append(el('span', 'proposed-date', v), document.createTextNode(' '), tag('proposed', 'Proposed'));
+    dl.append(el('dt', null, label), dd);
+  };
+
+  const renderTasks = (rows) => {
+    const tb = $('task-rows'); const COLS = 9;
+    if (!rows.length) {
+      const tr = el('tr'); const td = el('td', 'muted', activeFilterLabels().length ? 'No tasks match these filters. Use Reset filters to see every task.' : 'This tracker has no tasks.'); td.colSpan = COLS; tr.append(td);
+      tb.replaceChildren(tr); return;
+    }
+    const out = [];
+    rows.forEach((t) => {
+      const key = state.mode + ':' + t.Row; const open = state.open.has(key); const p = planFor(t);
+      const tr = el('tr', 'task'); tr.tabIndex = 0;
+      const btn = el('button', 'toggle', open ? 'Hide' : 'Details'); btn.type = 'button'; btn.setAttribute('aria-expanded', String(open));
+      const tdb = el('td'); tdb.append(btn); tr.append(tdb);
+      const cell = (v, cls, extras) => { const td = el('td', cls); if (blank(v)) td.append(tag('missing', 'Not recorded')); else { td.append(el('span', null, v)); (extras || []).forEach((x) => td.append(document.createTextNode(' '), x)); } return td; };
+      tr.append(
+        cell(t['Task ID'], null, t.duplicate ? [tag('risk', 'Duplicate')] : []), cell(t.Task), cell(t.Owner), cell(t.Status), cell(t.Priority),
+        cell(t['Due date'], 'num', t.dueCheck === 'Invalid date' ? [tag('risk', 'Invalid date')] : []),
+        cell(t['Estimated hours'], 'num', t.estCheck === 'Not a number' ? [tag('risk', 'Not a number')] : []));
+      const tdp = el('td', 'num');
+      if (p && p['Proposed finish (target)']) tdp.append(el('span', 'proposed-date', p['Proposed finish (target)']));
+      else tdp.append(el('span', 'muted', state.mode === 'csv' ? 'None (cleared)' : 'Not planned'));
+      tr.append(tdp); out.push(tr);
+
+      const dtr = el('tr', 'detail'); dtr.hidden = !open;
+      const dtd = el('td'); dtd.colSpan = COLS;
+      const grid = el('div', 'detail-grid');
+      const c1 = el('div', 'detail-col'); const h1 = el('h3', null, 'Source facts'); h1.append(tag('', state.mode === 'csv' ? 'Uploaded CSV' : 'Demo snapshot'));
+      const dl1 = el('dl', 'kv');
+      FIELDS.forEach((f) => {
+        const ex = [];
+        if (f === 'Due date' && t.dueCheck === 'Invalid date') ex.push(tag('risk', 'Invalid date'));
+        if (f === 'Estimated hours' && t.estCheck === 'Not a number') ex.push(tag('risk', 'Not a number'));
+        if (f === 'Task ID' && t.duplicate) ex.push(tag('risk', 'Duplicate'));
+        kv(dl1, f === 'Estimated hours' ? 'Estimated hours (planned effort, not elapsed time)' : f === 'Due date' ? 'Original due date' : f, t[f], ex);
+      });
+      c1.append(h1, dl1);
+      const c2 = el('div', 'detail-col'); const h2 = el('h3', null, 'Missing information'); h2.append(tag('missing', 'Confirm'));
+      const ul = el('ul', 'list');
+      FIELDS.filter((f) => blank(t[f])).forEach((f) => ul.append(el('li', null, f + ' is not recorded.')));
+      if (t.dueCheck === 'Invalid date') ul.append(el('li', null, 'The due date is not a valid date, so this task is not checked for overdue.'));
+      if (t.estCheck === 'Not a number') ul.append(el('li', null, 'The estimate is not a number, so it cannot be added up.'));
+      if (t.duplicate) ul.append(el('li', null, 'Another row uses the same Task ID.'));
+      if (t.Dependency) ul.append(el('li', null, 'Whether “' + t.Dependency + '” is complete is not recorded.'));
+      ul.append(el('li', null, 'Start date, actual hours and completion date are not tracked.'));
+      c2.append(h2, ul);
+      const c3 = el('div', 'detail-col'); const h3 = el('h3', null, 'Proposed plan'); h3.append(tag('proposed', 'Proposals only'));
+      c3.append(h3);
+      if (p) {
+        const dl3 = el('dl', 'kv');
+        kvProposed(dl3, 'Proposed start', p['Proposed start']);
+        kvProposed(dl3, 'Proposed finish (target)', p['Proposed finish (target)']);
+        kvProposed(dl3, 'Fallback checkpoint', p['Fallback checkpoint (proposed)']);
+        kv(dl3, 'Flag for target', p['Due-date flag (target)']);
+        kv(dl3, 'Flag for fallback', p['Due-date flag (fallback)']);
+        kv(dl3, 'Blocker or assumption', p['Blocker or assumption']);
+        kv(dl3, 'Owner and estimate check', p['Owner and estimate check']);
+        c3.append(dl3);
+      } else c3.append(el('p', 'muted', state.mode === 'csv' ? 'No proposed plan. Plans from the demo are cleared for uploaded trackers.' : 'No proposed dates for this task.'));
+      grid.append(c1, c2, c3); dtd.append(grid); dtr.append(dtd); out.push(dtr);
+
+      const toggle = () => {
+        const nowOpen = dtr.hidden; dtr.hidden = !nowOpen;
+        btn.textContent = nowOpen ? 'Hide' : 'Details'; btn.setAttribute('aria-expanded', String(nowOpen));
+        if (nowOpen) state.open.add(key); else state.open.delete(key);
+      };
+      tr.addEventListener('click', toggle);
+      tr.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === tr) { e.preventDefault(); toggle(); } });
+    });
+    tb.replaceChildren(...out);
+  };
+
+  const renderTimeline = (rows) => {
+    const wrap = $('tl');
+    if (state.mode === 'csv') { wrap.replaceChildren(el('p', 'muted', 'No proposed schedule. The demo’s proposed dates were cleared when this tracker was loaded.')); return; }
+    if (!state.windowStart || !state.windowEnd) { wrap.replaceChildren(el('p', 'muted', 'No plan window is set.')); return; }
+    const ids = new Set(rows.map((t) => t['Task ID']));
+    const planRows = state.plan.filter((p) => ids.has(p['Task ID']));
+    if (!planRows.length) { wrap.replaceChildren(el('p', 'muted', state.plan.length ? 'No planned task matches the filters.' : 'No tasks are in the plan.')); return; }
+    const days = [];
+    for (let d = Date.parse(state.windowStart + 'T00:00:00Z'); d <= Date.parse(state.windowEnd + 'T00:00:00Z'); d += 86400000) {
+      const wd = new Date(d).getUTCDay(); if (wd !== 0 && wd !== 6) days.push(new Date(d).toISOString().slice(0, 10));
+    }
+    const grid = el('div', 'tl'); grid.setAttribute('role', 'img');
+    grid.style.gridTemplateColumns = 'minmax(160px, 1.4fr) repeat(' + days.length + ', minmax(40px, 1fr))';
+    grid.append(el('div', 'tl-head', ''));
+    const dow = (iso) => new Date(iso + 'T00:00:00Z').getUTCDay();
+    days.forEach((d, i) => {
+      const h = el('div', 'tl-head' + (i && dow(d) === 1 ? ' tl-week' : ''));
+      const [, m, dd] = d.split('-').map(Number);
+      h.append(el('div', null, DAY_NAMES[dow(d)]), el('div', null, dd + ' ' + MON_NAMES[m - 1])); grid.append(h);
+    });
+    const tip = el('div', 'tip'); tip.hidden = true;
+    const show = (evt, lines) => {
+      tip.replaceChildren(el('div', 'strong', lines[0]), ...lines.slice(1).map((l) => el('div', null, l))); tip.hidden = false;
+      const box = wrap.getBoundingClientRect(); const w = tip.offsetWidth || 220;
+      tip.style.left = Math.max(4, Math.min(evt.clientX - box.left + wrap.scrollLeft + 12, wrap.scrollLeft + wrap.clientWidth - w - 4)) + 'px';
+      tip.style.top = (evt.clientY - box.top + wrap.scrollTop + 14) + 'px';
+    };
+    const labels = [];
+    planRows.forEach((r) => {
+      const s = parseDate(r['Proposed start']), fin = parseDate(r['Proposed finish (target)']), fb = parseDate(r['Fallback checkpoint (proposed)']), due = parseDate(r['Original due date']);
+      const lab = el('div', 'tl-label'); lab.append(el('b', null, r['Task ID'] || '—'), el('span', 'muted', r.Task || '')); grid.append(lab);
+      labels.push((r['Task ID'] || '') + ': proposed ' + (r['Proposed start'] || '?') + ' to ' + (r['Proposed finish (target)'] || '?') + ', fallback ' + (r['Fallback checkpoint (proposed)'] || 'none') + ', original due ' + (r['Original due date'] || 'not recorded'));
+      days.forEach((d, i) => {
+        const c = el('div', 'tl-cell' + (i && dow(d) === 1 ? ' tl-week' : ''));
+        const lines = [(r['Task ID'] || '') + ', ' + fmtIso(d)];
+        if (s && fin && d >= s && d <= fin) { c.append(el('div', 'tl-bar')); lines.push('Proposed work: ' + r['Proposed start'] + ' to ' + r['Proposed finish (target)']); }
+        if (fb && d === fb) { c.append(el('div', 'tl-fb')); lines.push('Proposed fallback checkpoint'); if (r['Due-date flag (fallback)']) lines.push(r['Due-date flag (fallback)']); }
+        if (due && d === due) { c.append(el('div', 'tl-due')); lines.push('Original due date (source fact)'); }
+        if (lines.length > 1) { ['mouseenter', 'mousemove', 'click'].forEach((ev) => c.addEventListener(ev, (e) => show(e, lines))); c.addEventListener('mouseleave', () => { tip.hidden = true; }); }
+        grid.append(c);
+      });
+    });
+    grid.setAttribute('aria-label', 'Proposed schedule ' + fmtIso(state.windowStart) + ' to ' + fmtIso(state.windowEnd) + '. ' + labels.join('. '));
+    wrap.replaceChildren(grid, tip);
+  };
+
+  const render = () => {
+    const f = state.filters;
+    fillSelect($('f-owner'), 'Owner', '(No owner recorded)', 'All owners', f.owner);
+    fillSelect($('f-status'), 'Status', '(No status recorded)', 'All statuses', f.status);
+    fillSelect($('f-priority'), 'Priority', '(No priority recorded)', 'All priorities', f.priority);
+    if (document.activeElement !== $('search')) $('search').value = f.q;
+    const rows = filtered();
+    renderHeader(); renderSummary(rows); renderAttention(rows); renderPriorities(); renderMissing(); renderTasks(rows); renderTimeline(rows);
+  };
+
+  /* ---------- CSV ---------- */
+  const parseCsv = (text) => {
+    const rows = []; let row = [], field = '', q = false;
+    const s = String(text).replace(/^\uFEFF/, '');
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (q) { if (ch === '"') { if (s[i + 1] === '"') { field += '"'; i++; } else q = false; } else field += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === ',') { row.push(field); field = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && s[i + 1] === '\n') i++; row.push(field); rows.push(row); row = []; field = ''; }
+      else field += ch;
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return {rows, unclosedQuote: q};
+  };
+  const csvCell = (v) => { const s = v === null || v === undefined ? '' : String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const download = (name, text) => {
+    const blob = new Blob([text], {type: 'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const validate = (fileName, text) => {
+    const {rows, unclosedQuote} = parseCsv(text);
+    const res = {fileName, blocking: [], issues: {}, info: {}, rows: [], missingColumns: [], extraColumns: []};
+    const push = (k, v) => { (res.issues[k] = res.issues[k] || []).push(v); };
+    const info = (k, v) => { (res.info[k] = res.info[k] || []).push(v); };
+    if (unclosedQuote) res.blocking.push('A quotation mark is never closed, so the file cannot be read reliably.');
+    const nonEmpty = rows.filter((r) => r.some((c) => String(c).trim() !== ''));
+    if (!nonEmpty.length) { res.blocking.push('The file is empty.'); return res; }
+    const header = nonEmpty[0].map((h) => String(h).trim());
+    if (header.length === 1 && /;/.test(header[0])) res.blocking.push('The file uses semicolons. Save it as a comma-separated CSV.');
+    const idx = {};
+    header.forEach((h, i) => { const f = FIELDS.find((x) => x.toLowerCase() === h.toLowerCase()); if (f && idx[f] === undefined) idx[f] = i; else if (h) res.extraColumns.push(h); });
+    res.missingColumns = FIELDS.filter((f) => idx[f] === undefined);
+    if (idx['Task ID'] === undefined) res.blocking.push('There is no Task ID column, so tasks cannot be told apart.');
+    const body = nonEmpty.slice(1);
+    if (!body.length) res.blocking.push('The file has column headings but no task rows.');
+    if (body.length > MAX_ROWS) res.blocking.push('The file has ' + body.length + ' task rows. This page loads up to ' + MAX_ROWS + '.');
+    const seen = {};
+    body.forEach((r, i) => {
+      const line = i + 2; const o = {};
+      FIELDS.forEach((f) => { const v = idx[f] === undefined ? '' : String(r[idx[f]] == null ? '' : r[idx[f]]).trim(); o[f] = v === '' ? null : v; });
+      const label = o['Task ID'] ? o['Task ID'] + ' (line ' + line + ')' : 'Line ' + line;
+      if (!o['Task ID']) push('Rows with no Task ID', label);
+      else { const k = o['Task ID'].toLowerCase(); (seen[k] = seen[k] || {id: o['Task ID'], lines: []}).lines.push(line); }
+      if (o['Due date'] && !parseDate(o['Due date'])) push('Invalid dates', label + ': “' + o['Due date'] + '”');
+      if (o['Estimated hours'] && !/^\d+(\.\d+)?$/.test(o['Estimated hours'])) push('Non-numeric estimates', label + ': “' + o['Estimated hours'] + '”');
+      if (idx.Owner !== undefined && !o.Owner) info('Missing owners (kept blank)', label);
+      if (idx['Estimated hours'] !== undefined && !o['Estimated hours']) info('Missing estimates (kept blank)', label);
+      if (idx['Due date'] !== undefined && !o['Due date']) info('Missing due dates (kept blank)', label);
+      res.rows.push(o);
+    });
+    Object.values(seen).filter((s) => s.lines.length > 1).forEach((s) => push('Duplicate Task IDs', s.id + ' on lines ' + s.lines.join(', ')));
+    if (res.missingColumns.length) res.issues['Missing columns'] = res.missingColumns.map((c) => c + ' (every value will show as not recorded)');
+    return res;
+  };
+
+  const renderValidation = () => {
+    const box = $('validation'); const p = state.pending;
+    if (!p) { box.hidden = true; box.replaceChildren(); return; }
+    box.hidden = false;
+    const parts = [el('h3', null, 'Check results for “' + p.fileName + '”'),
+      el('p', 'small muted', plural(p.rows.length, 'task row', 'task rows') + ' found.' + (p.extraColumns.length ? ' Columns that will be ignored: ' + p.extraColumns.join(', ') + '.' : ''))];
+    if (p.blocking.length) {
+      const g = el('div', 'val-group'); g.append(el('span', 'strong warn-text', 'This file cannot be loaded'));
+      const ul = el('ul', 'list'); p.blocking.forEach((b) => ul.append(el('li', null, b))); g.append(ul); parts.push(g);
+    }
+    const groups = Object.entries(p.issues);
+    if (groups.length) {
+      parts.push(el('span', 'strong', 'Issues to review. Values are kept exactly as written and flagged on the dashboard.'));
+      groups.forEach(([k, list]) => {
+        const g = el('div', 'val-group'); const h = el('span'); h.append(tag('risk', k + ': ' + list.length)); g.append(h);
+        const ul = el('ul', 'list small'); list.slice(0, 20).forEach((x) => ul.append(el('li', null, x)));
+        if (list.length > 20) ul.append(el('li', 'muted', 'and ' + (list.length - 20) + ' more'));
+        g.append(ul); parts.push(g);
+      });
+    } else if (!p.blocking.length) parts.push(el('p', 'small ok-text', 'No missing columns, invalid dates, non-numeric estimates or duplicate Task IDs.'));
+    const infos = Object.entries(p.info);
+    if (infos.length) {
+      const g = el('div', 'val-group'); g.append(el('span', 'strong', 'Missing values stay blank and are listed as missing. Nothing is filled in.'));
+      const r = el('div', 'row'); infos.forEach(([k, list]) => r.append(tag('missing', k + ': ' + list.length))); g.append(r); parts.push(g);
+    }
+    const actions = el('div', 'row');
+    if (!p.blocking.length) {
+      parts.push(el('p', 'small muted', 'Loading replaces the data on this page with this file and clears the demo’s proposed dates and priorities. It is kept in memory only and is gone after a refresh.'));
+      const lab = el('label', 'field', 'Overdue check date for this tracker');
+      const d = el('input'); d.type = 'date'; d.min = '2000-01-01'; d.max = '2100-12-31'; d.value = p.refDate || todayIso();
+      d.addEventListener('change', () => { if (d.value && d.validity.valid) p.refDate = d.value; });
+      lab.append(d); parts.push(lab);
+      const go = el('button', 'btn btn-primary', groups.length ? 'Load anyway, with issues flagged' : 'Load this tracker'); go.type = 'button';
+      go.addEventListener('click', () => {
+        const ref = p.refDate || todayIso();
+        const now = new Date();
+        Object.assign(state, {
+          mode: 'csv', fileName: p.fileName, loadedAt: now.toLocaleString('en-GB', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'}),
+          rawTasks: p.rows, plan: [], priorities: [], missingColumns: p.missingColumns, windowStart: null, windowEnd: null,
+          refDate: ref, refSource: 'chosen when the file was loaded', filters: {q: '', owner: '', status: '', priority: ''}, open: new Set(), pending: null
+        });
+        state.tasks = normalise(state.rawTasks);
+        $('file').value = ''; $('load-panel').hidden = true; $('open-load').setAttribute('aria-expanded', 'false');
+        renderValidation(); render();
+        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        $('overview').scrollIntoView({behavior: reduce ? 'auto' : 'smooth'});
+      });
+      actions.append(go);
+    }
+    const cancel = el('button', 'btn', 'Cancel'); cancel.type = 'button';
+    cancel.addEventListener('click', () => { state.pending = null; $('file').value = ''; renderValidation(); });
+    actions.append(cancel); parts.push(actions);
+    box.replaceChildren(...parts);
+  };
+
+  /* ---------- Events ---------- */
+  $('open-load').addEventListener('click', () => { const p = $('load-panel'); p.hidden = !p.hidden; $('open-load').setAttribute('aria-expanded', String(!p.hidden)); });
+  $('load-demo').addEventListener('click', () => { state.pending = null; $('file').value = ''; renderValidation(); loadDemo(); render(); });
+  $('template').addEventListener('click', () => download('web-task-tracker-template.csv', FIELDS.join(',') + '\r\n'));
+  $('export-csv').addEventListener('click', () => {
+    const rows = filtered();
+    const lines = [FIELDS.concat(['Due date check', 'Estimate check', 'Duplicate Task ID', 'Proposed finish (target)', 'Fallback checkpoint (proposed)']).map(csvCell).join(',')];
+    rows.forEach((t) => { const p = planFor(t); lines.push(FIELDS.map((f) => t[f]).concat([t.dueCheck, t.estCheck, t.duplicate ? 'Yes' : 'No', p ? p['Proposed finish (target)'] : '', p ? p['Fallback checkpoint (proposed)'] : '']).map(csvCell).join(',')); });
+    download(state.mode === 'demo' ? 'web-tasks-demo.csv' : 'web-tasks-' + state.fileName.replace(/\.csv$/i, '') + '-filtered.csv', lines.join('\r\n') + '\r\n');
+  });
+  $('file').addEventListener('change', () => {
+    const file = $('file').files && $('file').files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { state.pending = {fileName: file.name, blocking: ['The file is larger than 5 MB.'], issues: {}, info: {}, rows: [], missingColumns: [], extraColumns: []}; renderValidation(); return; }
+    const reader = new FileReader();
+    reader.onload = () => { state.pending = validate(file.name, reader.result); renderValidation(); };
+    reader.onerror = () => { state.pending = {fileName: file.name, blocking: ['The file could not be read.'], issues: {}, info: {}, rows: [], missingColumns: [], extraColumns: []}; renderValidation(); };
+    reader.readAsText(file);
+  });
+  let timer = null;
+  $('search').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { state.filters.q = $('search').value; render(); }, 200); });
+  [['f-owner', 'owner'], ['f-status', 'status'], ['f-priority', 'priority']].forEach(([id, k]) => $(id).addEventListener('change', () => { state.filters[k] = $(id).value; render(); }));
+  $('reset').addEventListener('click', () => { state.filters = {q: '', owner: '', status: '', priority: ''}; $('search').value = ''; render(); });
+  $('refdate').addEventListener('change', () => {
+    const v = $('refdate').value;
+    if (v && $('refdate').validity.valid) { state.refDate = v; state.refSource = 'chosen on this page'; render(); }
+  });
+
+  loadDemo();
+  render();
+})();
+</script>
+</body>
+</html>
